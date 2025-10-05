@@ -1,0 +1,31 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment
+.env
+venv/
+ENV/
+env/
+.venv/
+
+# SQLite database
+*.sqlite
+*.db
+
+# Test / coverage reports
+htmlcov/
+.coverage
+.pytest_cache/
+.coverage.*
+
+# IDE / editor files
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Local playground or debug scripts
+playground.py

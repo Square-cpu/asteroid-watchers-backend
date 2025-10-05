@@ -1,0 +1,15 @@
+Olá, {{name}},
+
+Seja muito bem-vindo(a) ao [Nome da Startup]!
+
+Notamos que você criou sua conta utilizando um login social (como Google ou GitHub). Para sua conveniência, utilizamos os dados básicos do seu perfil para criar sua conta em nossa plataforma automaticamente.
+
+Se desejar, você pode revisar ou alterar essas informações a qualquer momento na seção "Configurações" do seu perfil.
+
+Para garantir seu acesso, também geramos uma senha temporária para sua conta: {{password}}
+
+Caso queira definir uma senha diferente, você pode utilizar a opção "Mudar Senha" na sua tela de Configurações.
+
+Atenciosamente,
+
+A Equipe [Nome da Startup]

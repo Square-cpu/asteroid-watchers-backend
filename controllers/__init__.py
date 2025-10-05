@@ -1,0 +1,1 @@
+from controllers.asteroid_controller import asteroid_blueprint
