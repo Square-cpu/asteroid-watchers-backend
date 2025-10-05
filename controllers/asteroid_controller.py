@@ -192,6 +192,8 @@ def get_asteroid_data(asteroid_id):
         * math.sqrt(1 - (eccentricity) ** 2)
     )
 
+    aphelion = float(data['orbital_data']['aphelion_distance']) * 149597870700
+
     info = {
         "diameter": diameter,
         "mass": mass,
@@ -206,7 +208,7 @@ def get_asteroid_data(asteroid_id):
         "eccentricity": data["orbital_data"]["eccentricity"],
         "period": data["orbital_data"]["orbital_period"],
         "eccentricity": data["orbital_data"]["eccentricity"],
-        "aphelion": data["orbital_data"]["aphelion_distance"],
+        "aphelion": aphelion,
         "perihelion": data["orbital_data"]["perihelion_distance"],
         "total_energy": (mass * gravitational_constant * sun_mass)
         / (2 * (float(data["orbital_data"]["semi_major_axis"]))),
@@ -242,6 +244,10 @@ def simulate_impact():
     # Or accept simple location + radius and build polygon server-side
     location = payload.get("location")
     asteroid = payload.get("asteroid")  # optional full object from frontend
+
+    gravitational_constant = 6.67430 * (10 ** (-11))  # m^3 kg^-1 s^-2
+    sun_mass = 1.9885 * (10**30)  # kg
+    aphelion = float(asteroid['orbital_data']['aphelion_distance'])
 
     if not geojson and not location:
         return jsonify({"error": "either geojson or location required"}), 400
@@ -296,8 +302,8 @@ def simulate_impact():
         "geojson": json.dumps(geojson),
         "runasync": "false",
     }
-    if WORLDPOP_KEY:
-        wp_params["key"] = WORLDPOP_KEY
+    # if WORLDPOP_KEY:
+    #     wp_params["key"] = WORLDPOP_KEY
 
     try:
         resp = requests.get(WORLDPOP_BASE, params=wp_params, timeout=60)
@@ -420,11 +426,100 @@ def simulate_impact():
     except Exception:
         estimated_kills = None
 
+    density = 2500
+
+    diameter = None
+    if asteroid and isinstance(asteroid, dict):
+        # frontend mapping uses diameterMeters (meters)
+        for k in ("diameter", "diameterMeters", "diameter_m", "diameter_meters"):
+            if k in asteroid and asteroid[k] is not None:
+                try:
+                    diameter = float(asteroid[k])
+                    break
+                except (TypeError, ValueError):
+                    diameter = None
+
+    # fallback to NASA-style estimated_diameter object (min/max average)
+    if diameter is None and asteroid and isinstance(asteroid, dict):
+        est = asteroid.get("estimated_diameter") or asteroid.get("estimatedDiameter")
+        if isinstance(est, dict):
+            meters = est.get("meters") or est.get("m")
+            if isinstance(meters, dict):
+                mn = meters.get("estimated_diameter_min")
+                mx = meters.get("estimated_diameter_max")
+                try:
+                    if mn is not None and mx is not None:
+                        diameter = (float(mn) + float(mx)) / 2.0
+                except (TypeError, ValueError):
+                    diameter = None
+
+    impact_velocity = math.sqrt((gravitational_constant * 2 * sun_mass)/aphelion) #VEJA QUE ESSA VELOCIDADE É A VELOCIDADE DE IMPACTO MÁXIMA, POSTERIORMENTE VAMOS COLOCAR QUE ESSE É O CASO EXTREMO, O PROGRAMA ESTÁ RETORNANDO A VELOCIDADE EM M/S!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!, E SE FAZER CALCULOS COM ELA, MANTER ASSIM, MAS FICA MAIS BONITO MANDAR PRO USUARIO DIVIDIDO POR 1000, POIS ASSIM APARECE EM KM/S
+    
+    velocity_km_s = None
+    if asteroid and isinstance(asteroid, dict):
+        velocity_km_s = (
+            asteroid.get("entry_speed_km_s")
+            or asteroid.get("relative_velocity_km_s")
+            or asteroid.get("relative_velocity")
+            or asteroid.get("relativeVelocity")
+        )
+
+        # if nested close_approach_data exists in payload, try it safely
+        if velocity_km_s is None:
+            cad = asteroid.get("close_approach_data") or asteroid.get("closeApproachData")
+            if isinstance(cad, list) and len(cad) > 0 and isinstance(cad[0], dict):
+                rv = cad[0].get("relative_velocity") or cad[0].get("relativeVelocity") or {}
+                velocity_km_s = rv.get("kilometers_per_second") or rv.get("kilometersPerSecond")
+
+    try:
+        velocity_km_s = float(velocity_km_s) if velocity_km_s is not None else None
+    except (TypeError, ValueError):
+        velocity_km_s = None
+
+    # fallback: if velocity isn't provided, use the computed 'impact_velocity' (m/s -> km/s)
+    if velocity_km_s is None:
+        velocity_km_s = (impact_velocity / 1000.0) if impact_velocity is not None else 20.0
+
+    # convert to m/s for energy math
+    velocity_m_s = float(velocity_km_s) * 1000.0
+    
+    volume = (4/3)*math.pi * (diameter/2)**3
+
+    mass = density * volume
+
+    k_energy = 0.5 * mass * velocity_m_s**2
+
+    k_energy_mt = k_energy / (4.184*(10**15)) 
+    crater_diameter = 0.765 * k_energy_mt**(1/3.4) * 10
+
+    crater_depth = 0.4*(crater_diameter**0.3)
+
+    fireball_radius = 60 * (k_energy_mt**(1/3))
+
+    shock_wave = 3 * (k_energy_mt**(1/3))
+
+    pressure_at_20radius = 15 * (k_energy_mt**(1/3))/(20*(diameter/2))
+
+    wind_velocity_at_20radius = 1055 * (pressure_at_20radius)/(math.sqrt(103+7*pressure_at_20radius))
+
+    sismic_energy = 0.0001 * k_energy
+    sismic_magnitude = (3/2) * (math.log10(sismic_energy) - 4.8)
+
+
+    #precisa dar round(x, 3) em TODOS AQUI EM BAIXO!
+
     return jsonify(
         {
             "place": place,
             "population": int(round(population)),
             "estimated_kills": estimated_kills,
             "lethality_used": float(lethality),
+            "crater_radius": float(crater_diameter/2),
+            "impact_velocity_km_s": float(impact_velocity) / 1000,
+            "impact_energy_mt": float(k_energy_mt), #In MegaTNT
+            "fireball_radius_km": float(fireball_radius),
+            "shock_wave_km": float(shock_wave),
+            "wind_speed_kmh": float(wind_velocity_at_20radius),
+            "sismic_magnitude": sismic_magnitude,
         }
     )
