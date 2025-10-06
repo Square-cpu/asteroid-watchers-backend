@@ -1,140 +1,122 @@
-# Flask Backend Startup Template
+# Asteroid Watchers
 
-Welcome to the Startup Backend Template! This project is a production-ready foundation for building robust and scalable web applications using Flask. It comes pre-configured with a professional project structure, user authentication, testing suite, and API documentation, allowing you to focus on building your startup's unique features instead of reinventing the wheel.
+## What it does / Overview
 
-This template is designed to be easily adapted. Simply rename the "Startup" project name in the configuration files to your own project's name, configure your own email service, and start building.
+**Asteroid Watchers** is an educational web-based simulation platform that models near-Earth asteroid impacts and delivers comprehensive analysis of potentially hazardous objects. It integrates real NASA data, physics-based calculations, interactive 3D explorations, and an impact simulation engine for teaching and research support.
 
-### Core Technologies
+---
 
-  * **Framework**: [Flask](https://flask.palletsprojects.com/)
-  * **Database ORM**: [Flask-SQLAlchemy](https://flask-sqlalchemy.palletsprojects.com/)
-  * **Database Migrations**: [Flask-Migrate](https://flask-migrate.readthedocs.io/)
-  * **Authentication**: [Flask-JWT-Extended](https://flask-jwt-extended.readthedocs.io/) for token-based auth (access & refresh tokens).
-  * **API Documentation**: [Spectree](https://spectree.readthedocs.io/) with Pydantic for request validation and automatic OpenAPI (Swagger) documentation.
-  * **Testing**: [Pytest](https://docs.pytest.org/) with `pytest-cov` for coverage.
-  * **CORS**: [Flask-Cors](https://www.google.com/search?q=https://flask-cors.readthedocs.io/) to handle cross-origin requests.
-  * **Configuration**: Environment-based configuration management using `.env` files.
+## How it works
 
-### Getting Started
+### Data Collection & Processing
 
-Follow these steps to get the project running on your local machine.
+* Fetches real-time near-Earth object data from NASA’s `NEO Web Service API`.
+* Backend processing computes additional physical properties such as:
 
-#### 1. Prerequisites
+  * Mass estimation
+  * Orbital energy
+  * Impact velocities
+    using gravitational physics calculations and standard astronomical constants.
 
-  * Python 3.10+
-  * A package manager like `pip` or `uv`
+### Interactive 3D Visualization
 
-#### 2. Clone the Repository
+* 3D preview system with rotation and zoom to inspect asteroid shapes and characteristics visually.
 
-```bash
-git clone <your-repository-url>
-cd backend  # Or your project's root directory
-```
+### Impact Simulation Engine
 
-#### 3. Setup Virtual Environment
+Users can run physics-based impact simulations by:
 
-It's crucial to use a virtual environment to manage project dependencies.
+1. Selecting specific dates to view available near-Earth objects.
+2. Choosing an asteroid from a list (with approach distances).
+3. Placing impact coordinates on an interactive map.
+4. Running simulations that compute:
 
-```bash
-# Create the virtual environment
-python -m venv .venv
+   * Crater size
+   * Casualty estimates
+   * Seismic effects
+   * Fireball radius
+   * Shock wave impacts
 
-# Activate it
-# On Windows (PowerShell)
-.\.venv\Scripts\Activate.ps1
-# On macOS / Linux
-source .venv/bin/activate
-```
+### Customization Tools
 
-#### 4. Install Dependencies
+* Creator module to design custom asteroids (size, speed, composition) for "what-if" experiments.
 
-Install all required packages from the `requirements.txt` file.
+---
 
-```bash
-# Using pip
-python -m pip install -r requirements.txt
+## Benefits and Intended Impact
 
-# Or using uv (faster)
-uv pip install -r requirements.txt
-```
+### Educational Value
 
-#### 5. Configure Environment Variables
+* Transforms complex astronomy and physics into interactive learning experiences for students and educators.
 
-The application is configured using environment variables.
+### Public Awareness
 
-1.  **Create a `.env` file:** Make a copy of the example file.
+* Visualizes potentially hazardous asteroids to increase public understanding of planetary defense and monitoring programs.
 
-    ```bash
-    # On Windows
-    copy .env.example .env
-    # On macOS / Linux
-    cp .env.example .env
-    ```
+### Scientific Literacy
 
-2.  **Edit the `.env` file:** Open the new `.env` file and set the necessary variables. For local development, you can often leave the defaults. The `SECRET_KEY` is the most important one to set.
+* Bridges raw NASA data and public comprehension of orbital mechanics, impact physics, and risk assessment.
 
------
+### Research Support
 
-### Creating the database
+* Helps researchers and educators demonstrate impact scenarios and test theoretical deflection strategies via an integrated recommendation system.
 
-```bash
-flask db init
-```
+---
 
-```bash
-flask db migrate
-```
+## Tools, Technologies, and Development Stack
 
-```bash
-flask db upgrade
-```
+### Programming Languages
 
-### Running the Application
+* Python (backend data processing & API integration)
+* JavaScript (frontend interactivity)
+* HTML / CSS (UI)
 
-With the setup complete, you can run the Flask development server.
+### APIs and Data Sources
 
-```bash
-# Ensure your virtual environment is active
-# The command uses the FLASK_CONFIG and FLASK_DEBUG variables from your .env file
-python -m flask run
-```
+* NASA `NEO Web Service API` for asteroid data
+* Astronomical constants for gravitational/physics calculations
 
-The application will be running at `http://127.0.0.1:5000`.
+### Libraries and Frameworks
 
-The auto-generated API documentation (Swagger UI) will be available at `http://127.0.0.1:5000/apidoc/swagger`.
+* Python: `requests`, `json`, `math` (and other numeric utilities as needed)
+* Frontend: modern web tech for 3D rendering and mapping (WebGL / Three.js, mapping libraries, etc.)
 
------
+### Deployment Platform
 
-### Running the Test Suite
+* Vercel for hosting and deployment
+* Railway for backend deployment
 
-This project uses `pytest` for testing. We recommend running tests from the project's root directory (`backend`).
+### Physics Engine
 
-#### 1. Standard Test Run
+Custom simulation combining:
 
-This is the fastest way to check if all tests are passing. It provides a simple pass/fail summary.
+* Gravitational constant calculations
+* Orbital mechanics formulas
+* Energy & momentum conservation principles
+* Seismic impact modeling
 
-```bash
-python -m pytest
-```
+---
 
-#### 2. Test Run with Live Output
+## Creative & Innovative Aspects
 
-If a test is failing and you want to see `print()` statements from your code for debugging, use the `-s` flag.
+* **Real-Time Data Integration:** Live NASA data rather than static examples.
+* **Multi-Layered Simulation:** Unified modeling of orbital mechanics, atmospheric physics, and impact geology.
+* **Deflection Strategy Integration:** Algorithmic recommendations for planetary defense actions.
+* **User-Centric Design:** Guided, step-by-step interface that balances accessibility with scientific accuracy.
+* **Customization Capabilities:** Creator module for hypothetical scenarios and exploratory learning.
 
-```bash
-python -m pytest -s
-```
+---
 
-#### 3. Test Run with Coverage Report
+## Team Considerations & Factors
 
-To measure how much of your code is covered by tests, you can generate a coverage report. This command will produce both a summary in the terminal and a detailed HTML report.
+* **Scientific Accuracy vs. Accessibility:** Simplified but educational physics models to balance precision and performance.
+* **Data Reliability:** Estimation algorithms to handle incomplete or missing NASA data while keeping simulations functional.
+* **Educational Framework:** UI includes contextual help, unit clarifications, and guided steps to support pedagogy.
+* **Performance Optimization:** Caching and efficient processing to respect API rate limits and ensure responsiveness.
+* **Risk Communication:** Ethical presentation of results with clear disclaimers that simulations are educational models, not predictive tools.
 
-```bash
-python -m pytest --cov=. --cov-report=html
-```
+---
 
-After the command finishes:
+## Conclusion
 
-1.  A new directory named **`htmlcov`** will be created in your project root.
-2.  Open the **`htmlcov/index.html`** file in your web browser.
-3.  You can now browse the report, clicking on files to see exactly which lines of code were executed during the tests.
+Asteroid Watchers is a comprehensive educational platform that combines real astronomical data with interactive, physics-based simulation tools to improve public understanding, support research demonstrations, and provide hands-on learning about planetary defense and impact physics.
