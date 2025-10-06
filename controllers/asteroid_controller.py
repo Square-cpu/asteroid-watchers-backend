@@ -36,12 +36,12 @@ class ErrorResponse(BaseModel):
     details: str | None = None
 
 
-class AsteroidInfo(BaseModel):
-    diameter: float
-    mass: float
-    velocity: float
-    distance: float
-    magnitude: float
+# class AsteroidInfo(BaseModel):
+#     diameter: float
+#     mass: float
+#     velocity: float
+#     distance: float
+#     magnitude: float
 
 
 asteroid_blueprint = Blueprint("asteroid_controller", __name__, url_prefix="/asteroid")
@@ -116,7 +116,7 @@ def feed():
 
     near_earth_objects = data.get("near_earth_objects", {})
 
-    # Build list of simple asteroid objects (id, name, date, is_potentially_hazardous)
+    # Build list of simple asteroid objects (id, name, date)
     formatted_asteroids = []
     for date_str, asteroids in near_earth_objects.items():
         for asteroid in asteroids:
@@ -145,7 +145,6 @@ def get_asteroid_data(asteroid_id):
             "NASA_API_KEY not set; using DEMO_KEY (rate-limited)."
         )
 
-    # use the lookup endpoint for a single NEO by id
     nasa_url = f"https://api.nasa.gov/neo/rest/v1/neo/{asteroid_id}"
     params = {"api_key": nasa_key}
 
@@ -217,6 +216,8 @@ def get_asteroid_data(asteroid_id):
     return jsonify(info), 200
 
 
+
+
 WORLDPOP_BASE = os.getenv("WORLDPOP_BASE", "https://api.worldpop.org/v1/services/stats")
 WORLDPOP_DATASET = os.getenv("WORLDPOP_DATASET", "wpgppop")
 WORLDPOP_YEAR = os.getenv("WORLDPOP_YEAR", "2020")
@@ -224,26 +225,19 @@ WORLDPOP_KEY = os.getenv("WORLDPOP_KEY")
 
 NOMINATIM_BASE = "https://nominatim.openstreetmap.org/reverse"
 
-
 @asteroid_blueprint.route("/simulate-impact", methods=["POST"])
 def simulate_impact():
     """
-    Accepts a JSON body with either:
-      - 'geojson' (Polygon)  OR
-      - 'location': { lat, lon, radius_km } plus optionally 'asteroid' object
-    Uses WorldPop stats service to get population inside the (server-built) polygon,
-    uses asteroid info (if provided) to estimate lethality, and returns results.
+    Simulate an impact on the world based on a given asteroid
     """
     payload = request.get_json(force=True)
     if not payload:
         return jsonify({"error": "missing payload"}), 400
 
-    # Accept geojson directly (backwards compatible)
     geojson = payload.get("geojson")
 
-    # Or accept simple location + radius and build polygon server-side
     location = payload.get("location")
-    asteroid = payload.get("asteroid")  # optional full object from frontend
+    asteroid = payload.get("asteroid")
 
     gravitational_constant = 6.67430 * (10 ** (-11))  # m^3 kg^-1 s^-2
     sun_mass = 1.9885 * (10**30)  # kg
@@ -295,15 +289,13 @@ def simulate_impact():
             ],
         }
 
-    # Now call WorldPop stats service
+    # Call WorldPop stats service
     wp_params = {
         "dataset": WORLDPOP_DATASET,
         "year": WORLDPOP_YEAR,
         "geojson": json.dumps(geojson),
         "runasync": "false",
     }
-    # if WORLDPOP_KEY:
-    #     wp_params["key"] = WORLDPOP_KEY
 
     try:
         resp = requests.get(WORLDPOP_BASE, params=wp_params, timeout=60)
@@ -430,41 +422,14 @@ def simulate_impact():
 
     diameter = None
     if asteroid and isinstance(asteroid, dict):
-        # frontend mapping uses diameterMeters (meters)
-        for k in ("diameter", "diameterMeters", "diameter_m", "diameter_meters"):
-            if k in asteroid and asteroid[k] is not None:
-                try:
-                    diameter = float(asteroid[k])
-                    break
-                except (TypeError, ValueError):
-                    diameter = None
-
-    # fallback to NASA-style estimated_diameter object (min/max average)
-    if diameter is None and asteroid and isinstance(asteroid, dict):
-        est = asteroid.get("estimated_diameter") or asteroid.get("estimatedDiameter")
-        if isinstance(est, dict):
-            meters = est.get("meters") or est.get("m")
-            if isinstance(meters, dict):
-                mn = meters.get("estimated_diameter_min")
-                mx = meters.get("estimated_diameter_max")
-                try:
-                    if mn is not None and mx is not None:
-                        diameter = (float(mn) + float(mx)) / 2.0
-                except (TypeError, ValueError):
-                    diameter = None
-
-    impact_velocity = math.sqrt((gravitational_constant * 2 * sun_mass)/aphelion) #VEJA QUE ESSA VELOCIDADE É A VELOCIDADE DE IMPACTO MÁXIMA, POSTERIORMENTE VAMOS COLOCAR QUE ESSE É O CASO EXTREMO, O PROGRAMA ESTÁ RETORNANDO A VELOCIDADE EM M/S!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!, E SE FAZER CALCULOS COM ELA, MANTER ASSIM, MAS FICA MAIS BONITO MANDAR PRO USUARIO DIVIDIDO POR 1000, POIS ASSIM APARECE EM KM/S
+        diameter = float(asteroid["diameterMeters"])
+        
+    impact_velocity = math.sqrt((gravitational_constant * 2 * sun_mass)/aphelion) # NOTE THAT THIS VELOCITY IS THE MAXIMUM IMPACT VELOCITY, LATER WE WILL ASSUME THIS IS THE CASE, THE PROGRAM WILL RETURN THIS VELOCITY IN M/S!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!, AND IF WE MAKE CALCULATIONS WITH IT, WE WILL DIVIDE IT BY 1000, SO IT WILL APPEAR IN KM/S
     
     velocity_km_s = None
     if asteroid and isinstance(asteroid, dict):
-        velocity_km_s = (
-            asteroid.get("entry_speed_km_s")
-            or asteroid.get("relative_velocity_km_s")
-            or asteroid.get("relative_velocity")
-            or asteroid.get("relativeVelocity")
-        )
+        velocity_km_s = asteroid.get("relative_velocity_km_s")
 
-        # if nested close_approach_data exists in payload, try it safely
         if velocity_km_s is None:
             cad = asteroid.get("close_approach_data") or asteroid.get("closeApproachData")
             if isinstance(cad, list) and len(cad) > 0 and isinstance(cad[0], dict):
@@ -505,21 +470,18 @@ def simulate_impact():
     sismic_energy = 0.0001 * k_energy
     sismic_magnitude = (3/2) * (math.log10(sismic_energy) - 4.8)
 
-
-    #precisa dar round(x, 3) em TODOS AQUI EM BAIXO!
-
     return jsonify(
         {
             "place": place,
-            "population": int(round(population)),
+            "population": int(population),
             "estimated_kills": estimated_kills,
             "lethality_used": float(lethality),
-            "crater_radius": float(crater_diameter/2),
-            "impact_velocity_km_s": float(impact_velocity) / 1000,
-            "impact_energy_mt": float(k_energy_mt), #In MegaTNT
-            "fireball_radius_km": float(fireball_radius),
-            "shock_wave_km": float(shock_wave),
-            "wind_speed_kmh": float(wind_velocity_at_20radius),
-            "sismic_magnitude": sismic_magnitude,
+            "crater_radius": float(round(crater_diameter/2, 3)),
+            "impact_velocity_km_s": float(round(impact_velocity / 1000, 3)),
+            "impact_energy_mt": float(round(k_energy_mt, 3)), #In MegaTNT
+            "fireball_radius_km": float(round(fireball_radius, 3)),
+            "shock_wave_km": float(round(shock_wave, 3)),
+            "wind_speed_kmh": float(round(wind_velocity_at_20radius, 3)),
+            "sismic_magnitude": float(round(sismic_magnitude, 3)),
         }
     )
